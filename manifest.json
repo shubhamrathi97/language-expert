@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Email Assistant",
+  "version": "1.0",
+  "description": "Grammar checker and smart reply generator for Gmail",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [{
+    "matches": ["https://mail.google.com/*"],
+    "js": ["content.js"]
+  }],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
