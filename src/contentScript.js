@@ -2,6 +2,7 @@ import LLMService from "./services/llmService.js";
 import UIComponents from "./components/UIComponents.js";
 import SuggestionManager from "./services/suggestionManager.js";
 import ReplyManager from "./services/replyManager.js";
+import "./contentScript.css";
 
 (function () {
   let textFields = [];
@@ -34,11 +35,9 @@ import ReplyManager from "./services/replyManager.js";
       'input[type="text"], input[type="email"], textarea, [contenteditable="true"]'
     );
     inputs.forEach((field) => {
-      if (!textFields.includes(field)) {
-        if (!isOurUIElement(field)) {
-          textFields.push(field);
-          addFieldListeners(field);
-        }
+      if (!textFields.includes(field) && !isOurUIElement(field)) {
+        textFields.push(field);
+        addFieldListeners(field);
       }
     });
   }
@@ -47,6 +46,7 @@ import ReplyManager from "./services/replyManager.js";
     field.addEventListener("focus", () => {
       if (!isOurUIElement(field)) {
         activeTextField = field;
+        console.log("Active text field:", activeTextField);
         positionUIElements();
       }
     });
@@ -87,7 +87,7 @@ import ReplyManager from "./services/replyManager.js";
     if (isTextField(target) && target === activeTextField) {
       chrome.storage.sync.get("grammarCheck", function (data) {
         if (data.grammarCheck !== false) {
-          debounce(checkGrammar, 1000)();
+          // debounce(checkGrammar, 1000)();
         }
       });
     }
@@ -140,18 +140,26 @@ import ReplyManager from "./services/replyManager.js";
   }
 
   async function handleReplyGeneration() {
+    console.log("Generating reply...");
+    if (!activeTextField) return;
+
     const text =
-      window.getSelection().toString() || getTextFromField(activeTextField);
+      window.getSelection().toString() ||
+      getTextContext() ||
+      getTextFromField(activeTextField);
+    console.log("Generating reply...: text: ", text);
     if (!text) return;
 
     const response = await LLMService.generateReply(text);
+    console.log("Generating reply...: response: ", response);
+
     if (response?.reply) {
       showAutoReplyPanel(response.reply, true);
     }
   }
 
   function positionUIElements() {
-    if (!activeTextField && !window.getSelection().toString()) return;
+    if (!activeTextField) return;
 
     const floatingButtons = document.querySelector(".floating-buttons");
     if (!floatingButtons) return;
@@ -159,7 +167,7 @@ import ReplyManager from "./services/replyManager.js";
     let rect;
     const selection = window.getSelection();
 
-    if (selection.toString()) {
+    if (selection?.toString()) {
       rect = selection.getRangeAt(0).getBoundingClientRect();
     } else if (activeTextField) {
       rect = activeTextField.getBoundingClientRect();
@@ -206,130 +214,15 @@ import ReplyManager from "./services/replyManager.js";
     );
   }
 
-  function checkGrammar() {
-    if (!activeTextField) return;
-
-    const text = getTextFromField(activeTextField);
-    if (!text || text.trim().length === 0) return;
-
-    chrome.storage.sync.get(
-      [
-        "llmProvider",
-        "openaiKey",
-        "anthropicKey",
-        "geminiKey",
-        "deepseekKey",
-        "grokKey",
-      ],
-      function (data) {
-        const provider = data.llmProvider || "openai";
-        const apiKey = data[`${provider}Key`];
-
-        if (!apiKey) {
-          console.error(`No API key configured for ${provider}`);
-          return;
-        }
-
-        chrome.runtime.sendMessage(
-          {
-            action: "checkGrammar",
-            text: text,
-            provider: provider,
-            apiKey: apiKey,
-          },
-          function (response) {
-            if (response && response.suggestions) {
-              showSuggestions(response.suggestions);
-            }
-          }
-        );
-      }
-    );
-  }
-
-  function generateAutoReply(context = "") {
-    if (!activeTextField) return;
-
+  function getTextContext() {
     const possibleContextElements = document.querySelectorAll(
       ".conversation, .thread, .message-container, .email-body"
     );
+    let context = "";
     if (possibleContextElements.length > 0) {
-      context = possibleContextElements[0].textContent;
+      context += possibleContextElements[0].textContent;
     }
-
-    if (!context) {
-      context = getTextFromField(activeTextField);
-    }
-
-    if (!context || context.trim().length === 0) {
-      const contextForm = document.createElement("div");
-      contextForm.className = "context-form";
-      contextForm.innerHTML = `
-        <div style="margin-bottom: 10px;">Please provide context for generating a reply:</div>
-        <textarea style="width: 100%; height: 100px; margin-bottom: 10px;"></textarea>
-        <div style="display: flex; justify-content: space-between;">
-          <button class="submit-btn">Generate Reply</button>
-        </div>
-      `;
-
-      showAutoReplyPanel("");
-      autoReplyPanelModel.appendChild(contextForm);
-
-      const textarea = contextForm.querySelector("textarea");
-      const submitBtn = contextForm.querySelector(".submit-btn");
-
-      submitBtn.addEventListener("click", () => {
-        const userContext = textarea.value.trim();
-        if (userContext) {
-          context = userContext;
-        }
-        generateAutoReply(context);
-        hideAutoReplyPanel();
-      });
-      return;
-    }
-
-    chrome.storage.sync.get(
-      [
-        "llmProvider",
-        "openaiKey",
-        "anthropicKey",
-        "geminiKey",
-        "deepseekKey",
-        "grokKey",
-      ],
-      function (data) {
-        const provider = data.llmProvider || "openai";
-        const apiKey = data[`${provider}Key`];
-
-        if (!apiKey) {
-          showAutoReplyPanel(
-            `No API key configured for ${provider}. Please add your API key in the extension settings.`
-          );
-          return;
-        }
-
-        showAutoReplyPanel("Generating response...");
-
-        chrome.runtime.sendMessage(
-          {
-            action: "generateReply",
-            context: context,
-            provider: provider,
-            apiKey: apiKey,
-          },
-          function (response) {
-            if (response && response.reply) {
-              showAutoReplyPanel(response.reply, true);
-            } else {
-              showAutoReplyPanel(
-                "Failed to generate a response. Please try again."
-              );
-            }
-          }
-        );
-      }
-    );
+    return context;
   }
 
   function showSuggestions(suggestions) {
@@ -338,7 +231,7 @@ import ReplyManager from "./services/replyManager.js";
   }
 
   function showAutoReplyPanel(reply, isReply = false) {
-    replyManager.showAutoReplyPanel(reply, isReply);
+    replyManager.showAutoReplyPanel(reply, activeTextField, isReply);
     positionUIElements();
   }
 

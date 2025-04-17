@@ -2,17 +2,16 @@ export default class ReplyManager {
   constructor() {
     this.autoReplyPanel = null;
     this.autoReplyPanelModel = null;
-    this.activeTextField = null;
   }
 
   init(autoReplyPanel, autoReplyPanelModel, activeTextField) {
     this.autoReplyPanel = autoReplyPanel;
     this.autoReplyPanelModel = autoReplyPanelModel;
-    this.activeTextField = activeTextField;
   }
 
-  showAutoReplyPanel(reply, isReply = false) {
-    if (!this.autoReplyPanelModel || !this.activeTextField) return;
+  showAutoReplyPanel(reply, field, isReply = false) {
+    console.log("showAutoReplyPanel: ", reply, isReply);
+    if (!this.autoReplyPanelModel || !field) return;
 
     this.autoReplyPanelModel.innerHTML = "";
 
@@ -20,6 +19,7 @@ export default class ReplyManager {
       const replyContent = document.createElement("div");
       replyContent.className = "reply-content";
       replyContent.textContent = reply;
+      replyContent.contentEditable = "true";
 
       const buttonContainer = document.createElement("div");
       buttonContainer.className = "reply-buttons";
@@ -28,7 +28,7 @@ export default class ReplyManager {
       useButton.className = "use-reply-button";
       useButton.textContent = "Use This Reply";
       useButton.addEventListener("click", () => {
-        this.setTextInField(this.activeTextField, reply);
+        this.setTextInField(field, replyContent.textContent);
         this.hideAutoReplyPanel();
       });
 
@@ -52,6 +52,7 @@ export default class ReplyManager {
 
       this.autoReplyPanelModel.appendChild(replyContent);
       this.autoReplyPanelModel.appendChild(buttonContainer);
+      console.log("showAutoReplyPanel: adding use button");
     } else {
       const messageElement = document.createElement("div");
       messageElement.className = "reply-message";
@@ -69,6 +70,10 @@ export default class ReplyManager {
     }
 
     this.autoReplyPanel.style.display = "flex";
+    console.log(
+      "showAutoReplyPanel: autoReplyPanel.style.display: ",
+      this.autoReplyPanel.style.display
+    );
   }
 
   hideAutoReplyPanel() {
