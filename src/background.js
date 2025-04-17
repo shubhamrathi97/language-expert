@@ -1,21 +1,37 @@
-'use strict';
-
-// With background scripts you can communicate with popup
-// and contentScript files.
-// For more information on background script,
-// See https://developer.chrome.com/extensions/background_pages
+import { LLMProvider } from "./providers/llmProvider.js";
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'GREETINGS') {
-    const message = `Hi ${
-      sender.tab ? 'Con' : 'Pop'
-    }, my name is Bac. I am from Background. It's great to hear from you.`;
+  const llm = LLMProvider.create(request.provider, request.apiKey);
+  try {
+    if (request.action === "checkGrammar") {
+      handleGrammarCheck(llm, request.text, sendResponse);
+      return true;
+    }
 
-    // Log message coming from the `request` parameter
-    console.log(request.payload.message);
-    // Send a response message
-    sendResponse({
-      message,
-    });
+    if (request.action === "generateReply") {
+      handleReplyGeneration(llm, request.context, sendResponse);
+      return true;
+    }
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+    console.log("Error in background script:", error);
   }
 });
+
+async function handleGrammarCheck(llm, text, sendResponse) {
+  try {
+    const suggestions = await llm.checkGrammar(text);
+    sendResponse({ success: true, suggestions });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+async function handleReplyGeneration(llm, context, sendResponse) {
+  try {
+    const reply = await llm.generateReply(context);
+    sendResponse({ success: true, reply });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
+}

@@ -1,32 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>My Chrome Extension</title>
-    <link rel="stylesheet" href="popup.css" />
-  </head>
-  <body>
-    <div class="app">
-      <p class="counter-label">Counter</p>
-      <div id="counter" class="counter"></div>
-      <div class="button-container">
-        <button id="decrementBtn" class="button">-</button>
-        <button id="incrementBtn" class="button">+</button>
-      </div>
-
-      <hr class="divider" />
-
-      <p class="title">Chrome Extension is Ready!</p>
-      <p class="subtitle">Start by updating <code>popup.html</code></p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grammar Assistant & Auto Reply</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    body { width: 300px; padding: 10px; }
+    select, input { width: 100%; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Grammar Assistant & Auto Reply</h1>
+    
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="settings">Settings</button>
+      <button class="tab-btn" data-tab="apikeys">API Keys</button>
     </div>
-
-    <script src="popup.js"></script>
-
-    <!--
-      This HTML file opens when you click on icon from the toolbar.
-
-      To begin the development, run `npm run watch`.
-      To create a production bundle, use `npm run build`.
-    -->
-  </body>
+    
+    <div class="tab-content active" id="settings">
+      <h2>Features</h2>
+      <div class="feature">
+        <label>
+          <input type="checkbox" id="grammar-check" checked>
+          Grammar Check
+        </label>
+      </div>
+      <div class="feature">
+        <label>
+          <input type="checkbox" id="auto-reply" checked>
+          Auto Reply Generation
+        </label>
+      </div>
+      
+      <h2>Preferred LLM Provider</h2>
+      <select id="llm-provider">
+        <option value="openai">OpenAI (GPT-4)</option>
+        <option value="anthropic">Anthropic (Claude)</option>
+        <option value="gemini">Google (Gemini)</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="grok">xAI (Grok)</option>
+      </select>
+      
+      <div class="buttons">
+        <button id="save-settings">Save Settings</button>
+      </div>
+    </div>
+    
+    <div class="tab-content" id="apikeys">
+      <h2>API Keys Configuration</h2>
+      
+      <div class="api-input">
+        <label for="openai-key">OpenAI API Key:</label>
+        <input type="password" id="openai-key" placeholder="sk-...">
+      </div>
+      
+      <div class="api-input">
+        <label for="anthropic-key">Anthropic API Key:</label>
+        <input type="password" id="anthropic-key" placeholder="sk-ant-...">
+      </div>
+      
+      <div class="api-input">
+        <label for="gemini-key">Google Gemini API Key:</label>
+        <input type="password" id="gemini-key" placeholder="AIza...">
+      </div>
+      
+      <div class="api-input">
+        <label for="deepseek-key">DeepSeek API Key:</label>
+        <input type="password" id="deepseek-key" placeholder="...">
+      </div>
+      
+      <div class="api-input">
+        <label for="grok-key">xAI Grok API Key:</label>
+        <input type="password" id="grok-key" placeholder="...">
+      </div>
+      
+      <div class="buttons">
+        <button id="save-keys">Save API Keys</button>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
 </html>

@@ -2,111 +2,101 @@
 
 import './popup.css';
 
-(function () {
-  // We will make use of Storage API to get and store `count` value
-  // More information on Storage API can we found at
-  // https://developer.chrome.com/extensions/storage
-
-  // To get storage access, we have to mention it in `permissions` property of manifest.json file
-  // More information on Permissions can we found at
-  // https://developer.chrome.com/extensions/declare_permissions
-  const counterStorage = {
-    get: (cb) => {
-      chrome.storage.sync.get(['count'], (result) => {
-        cb(result.count);
-      });
-    },
-    set: (value, cb) => {
-      chrome.storage.sync.set(
-        {
-          count: value,
-        },
-        () => {
-          cb();
-        }
-      );
-    },
-  };
-
-  function setupCounter(initialValue = 0) {
-    document.getElementById('counter').innerHTML = initialValue;
-
-    document.getElementById('incrementBtn').addEventListener('click', () => {
-      updateCounter({
-        type: 'INCREMENT',
-      });
-    });
-
-    document.getElementById('decrementBtn').addEventListener('click', () => {
-      updateCounter({
-        type: 'DECREMENT',
-      });
-    });
-  }
-
-  function updateCounter({ type }) {
-    counterStorage.get((count) => {
-      let newCount;
-
-      if (type === 'INCREMENT') {
-        newCount = count + 1;
-      } else if (type === 'DECREMENT') {
-        newCount = count - 1;
-      } else {
-        newCount = count;
-      }
-
-      counterStorage.set(newCount, () => {
-        document.getElementById('counter').innerHTML = newCount;
-
-        // Communicate with content script of
-        // active tab by sending a message
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          const tab = tabs[0];
-
-          chrome.tabs.sendMessage(
-            tab.id,
-            {
-              type: 'COUNT',
-              payload: {
-                count: newCount,
-              },
-            },
-            (response) => {
-              console.log('Current count value passed to contentScript file');
-            }
-          );
-        });
-      });
-    });
-  }
-
-  function restoreCounter() {
-    // Restore count value
-    counterStorage.get((count) => {
-      if (typeof count === 'undefined') {
-        // Set counter value as 0
-        counterStorage.set(0, () => {
-          setupCounter(0);
-        });
-      } else {
-        setupCounter(count);
-      }
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', restoreCounter);
-
-  // Communicate with background file by sending a message
-  chrome.runtime.sendMessage(
-    {
-      type: 'GREETINGS',
-      payload: {
-        message: 'Hello, my name is Pop. I am from Popup.',
-      },
-    },
-    (response) => {
-      console.log(response.message);
+document.addEventListener('DOMContentLoaded', function() {
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+  const saveSettingsBtn = document.getElementById('save-settings');
+  const saveKeysBtn = document.getElementById('save-keys');
+  
+  // Load saved settings
+  chrome.storage.sync.get([
+    'grammarCheck', 
+    'autoReply', 
+    'llmProvider',
+    'openaiKey',
+    'anthropicKey',
+    'geminiKey',
+    'deepseekKey',
+    'grokKey',
+  ], function(data) {
+    // Set checkboxes
+    document.getElementById('grammar-check').checked = 
+      data.grammarCheck !== undefined ? data.grammarCheck : true;
+    document.getElementById('auto-reply').checked = 
+      data.autoReply !== undefined ? data.autoReply : true;
+    
+    // Set selected LLM provider
+    if (data.llmProvider) {
+      document.getElementById('llm-provider').value = data.llmProvider;
     }
-  );
-})();
+    
+    // Set API keys
+    if (data.openaiKey) document.getElementById('openai-key').value = data.openaiKey;
+    if (data.anthropicKey) document.getElementById('anthropic-key').value = data.anthropicKey;
+    if (data.geminiKey) document.getElementById('gemini-key').value = data.geminiKey;
+    if (data.deepseekKey) document.getElementById('deepseek-key').value = data.deepseekKey;
+    if (data.grokKey) document.getElementById('grok-key').value = data.grokKey;
+  });
+  
+  // Tab switching
+  tabButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      // Remove active class from all buttons and contents
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      // Add active class to clicked button and corresponding content
+      this.classList.add('active');
+      document.getElementById(this.dataset.tab).classList.add('active');
+    });
+  });
+  
+  // Save settings
+  saveSettingsBtn.addEventListener('click', function() {
+    const grammarCheck = document.getElementById('grammar-check').checked;
+    const autoReply = document.getElementById('auto-reply').checked;
+    const llmProvider = document.getElementById('llm-provider').value;
+    
+    chrome.storage.sync.set({
+      grammarCheck: grammarCheck,
+      autoReply: autoReply,
+      llmProvider: llmProvider,
+    }, function() {
+      showSaveMessage('Settings saved!');
+    });
+  });
+  
+  // Save API keys
+  saveKeysBtn.addEventListener('click', function() {
+    const openaiKey = document.getElementById('openai-key').value;
+    const anthropicKey = document.getElementById('anthropic-key').value;
+    const geminiKey = document.getElementById('gemini-key').value;
+    const deepseekKey = document.getElementById('deepseek-key').value;
+    const grokKey = document.getElementById('grok-key').value;
+    
+    chrome.storage.sync.set({
+      openaiKey: openaiKey,
+      anthropicKey: anthropicKey,
+      geminiKey: geminiKey,
+      deepseekKey: deepseekKey,
+      grokKey: grokKey
+    }, function() {
+      showSaveMessage('API keys saved!');
+    });
+  });
+  
+  function showSaveMessage(message) {
+    const saveMsg = document.createElement('div');
+    saveMsg.textContent = message;
+    saveMsg.style.color = '#4CAF50';
+    saveMsg.style.marginTop = '10px';
+    saveMsg.style.fontSize = '14px';
+    saveMsg.style.textAlign = 'center';
+    
+    document.querySelector('.buttons').appendChild(saveMsg);
+    
+    setTimeout(() => {
+      saveMsg.remove();
+    }, 2000);
+  }
+});

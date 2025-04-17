@@ -1,7 +1,7 @@
 export default class GeminiProvider {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    this.endpoint = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent';
+    this.endpoint = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent';
   }
 
   async checkGrammar(text) {
@@ -36,7 +36,11 @@ export default class GeminiProvider {
         }]
       })
     });
-
-    return await response.json();
+    let res = await response.json();
+    console.log("Gemini response:", res);
+    if (res.error) {
+      throw new Error(res.error.message);
+    }
+    return res?.candidates[0]?.content?.parts[0]?.text;
   }
 }
