@@ -140,22 +140,17 @@ import "./contentScript.css";
   }
 
   async function handleReplyGeneration() {
-    console.log("Generating reply...");
     if (!activeTextField) return;
+    const selectedText =
+      window.getSelection().toString() || getTextFromField(activeTextField);
+    const contextText = getTextContext();
 
-    const text =
-      window.getSelection().toString() ||
-      getTextContext() ||
-      getTextFromField(activeTextField);
-    console.log("Generating reply...: text: ", text);
-    if (!text) return;
-
-    const response = await LLMService.generateReply(text);
-    console.log("Generating reply...: response: ", response);
-
-    if (response?.reply) {
-      showAutoReplyPanel(response.reply, true);
-    }
+    replyManager.handleReplyGeneration(
+      selectedText,
+      contextText,
+      activeTextField,
+      window.location.hostname
+    );
   }
 
   function positionUIElements() {
@@ -215,13 +210,55 @@ import "./contentScript.css";
   }
 
   function getTextContext() {
-    const possibleContextElements = document.querySelectorAll(
-      ".conversation, .thread, .message-container, .email-body"
-    );
+    // Common selectors for different platforms
+    const contextSelectors = [
+      // Gmail
+      ".h7", // Email thread
+      '[role="listitem"]', // Individual emails
+      // LinkedIn
+      ".msg-s-event-list", // Chat container
+      ".msg-s-event-list-item", // Individual messages
+      // WhatsApp
+      ".copyable-text", // Messages
+      "._2wUmf", // Chat container
+      // Generic
+      ".conversation",
+      ".thread",
+      ".message-container",
+      ".chat-history",
+      "[data-message]",
+      '[role="main"]',
+    ];
+
     let context = "";
-    if (possibleContextElements.length > 0) {
-      context += possibleContextElements[0].textContent;
+
+    // If no specific context found, try to get context from active text field's parent
+    if (!context && activeTextField) {
+      let parent = activeTextField.parentElement;
+      for (let i = 0; i < 3 && parent; i++) {
+        const text = parent.textContent.trim();
+        if (text.length > 100) {
+          context = text;
+          break;
+        }
+        parent = parent.parentElement;
+      }
     }
+
+    // Try to find context elements using our selectors
+    for (const selector of contextSelectors) {
+      const elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        // Convert NodeList to Array and get last few messages/emails
+        const recentElements = Array.from(elements).slice(-5);
+        context = recentElements
+          .map((el) => el.textContent.trim())
+          .filter((text) => text.length > 0)
+          .join("\n\n");
+        if (context) break;
+      }
+    }
+
     return context;
   }
 

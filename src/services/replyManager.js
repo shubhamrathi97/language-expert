@@ -1,3 +1,6 @@
+import LLMService from "./llmService.js";
+import UIComponents from "../components/UIComponents.js";
+
 export default class ReplyManager {
   constructor() {
     this.autoReplyPanel = null;
@@ -93,5 +96,86 @@ export default class ReplyManager {
       field.textContent = text;
     }
     field.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  handleReplyGeneration(selectedText, contextText, activeField, website) {
+    this.autoReplyPanelModel.innerHTML =
+      UIComponents.createContextForm(website);
+    this.autoReplyPanel.style.display = "flex";
+
+    const actionContextInput =
+      this.autoReplyPanelModel.querySelector("#actionContext");
+    const contextBackgroundInput =
+      this.autoReplyPanelModel.querySelector("#contextBackground");
+    const websiteInput = this.autoReplyPanelModel.querySelector("#website");
+    const actionInput = this.autoReplyPanelModel.querySelector("#action");
+    const toneInput = this.autoReplyPanelModel.querySelector("#tone");
+    const generateBtn = this.autoReplyPanelModel.querySelector("#generateBtn");
+
+    // Adding action details for selected text.
+    actionContextInput.value = selectedText;
+
+    // Adding background/ previous conversation details for AI.
+    contextBackgroundInput.value = contextText;
+
+    // Submit button
+    const loader = generateBtn.querySelector(".loader");
+    const btnText = generateBtn.querySelector("span");
+
+    generateBtn.addEventListener("click", async () => {
+      const action = actionInput.value;
+      const actionContext = actionContextInput.value;
+      const tone = toneInput.value;
+      const backgroundContext = contextBackgroundInput.value;
+      const website = websiteInput.value;
+
+      if (!action || !tone) {
+        alert("Please select both action and tone");
+        return;
+      }
+
+      // Show loading state
+      loader.style.display = "block";
+      btnText.style.display = "none";
+      generateBtn.disabled = true;
+
+      try {
+        const response = await LLMService.generateReply(
+          this.generatePrompt(
+            action,
+            actionContext,
+            backgroundContext,
+            website,
+            tone
+          )
+        );
+
+        if (response?.reply) {
+          this.showAutoReplyPanel(response.reply, activeField, true);
+        }
+      } catch (error) {
+        console.error("Error generating reply:", error);
+        alert("Failed to generate reply. Please try again.");
+      } finally {
+        // Hide loading state
+        loader.style.display = "none";
+        btnText.style.display = "block";
+        generateBtn.disabled = false;
+      }
+    });
+  }
+
+  generatePrompt(action, actionContext, contextText, website, tone) {
+    let prompt = `You are a helpful writer assistant. Help in Generating the ${action} response for the following input: "${actionContext}"`;
+    if (contextText) {
+      prompt += `\n\nBackground Context for generating the input : "${contextText}"`;
+    }
+    if (website) {
+      prompt += `\n\nResponse format should follow guideline of website: "${website}"`;
+    }
+    if (tone) {
+      prompt += `\n\nTone: "${tone}"`;
+    }
+    return prompt;
   }
 }

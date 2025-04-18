@@ -1,22 +1,27 @@
 export default class GeminiProvider {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    this.endpoint = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent';
+    this.endpoint =
+      "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent";
   }
 
   async checkGrammar(text) {
     const response = await fetch(`${this.endpoint}?key=${this.apiKey}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Please check this text for grammar and suggest improvements: "${text}"`
-          }]
-        }]
-      })
+        contents: [
+          {
+            parts: [
+              {
+                text: `Please check this text for grammar and suggest improvements: "${text}"`,
+              },
+            ],
+          },
+        ],
+      }),
     });
 
     return await response.json();
@@ -24,17 +29,21 @@ export default class GeminiProvider {
 
   async generateReply(context) {
     const response = await fetch(`${this.endpoint}?key=${this.apiKey}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Generate a professional reply to this email: "${context}"`
-          }]
-        }]
-      })
+        contents: [
+          {
+            parts: [
+              {
+                text: context,
+              },
+            ],
+          },
+        ],
+      }),
     });
     let res = await response.json();
     console.log("Gemini response:", res);
